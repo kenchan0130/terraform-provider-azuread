@@ -99,8 +99,8 @@ func (r GroupLicenseAssignmentResource) license(data acceptance.TestData) string
 %[1]s
 
 resource "azuread_group_license_assignment" "test" {
-  group_object_id  = azuread_group.test.object_id
-  sku_id           = "90d8b3f8-712e-4f7b-aa1e-62e7ae6cbe96" # SMB_APPS
+  group_object_id = azuread_group.test.object_id
+  sku_id          = "90d8b3f8-712e-4f7b-aa1e-62e7ae6cbe96" # SMB_APPS
 }
 `, r.template(data))
 }
@@ -112,7 +112,7 @@ func (r GroupLicenseAssignmentResource) requiresImport(data acceptance.TestData)
 resource "azuread_group_license_assignment" "import" {
   group_object_id = azuread_group_license_assignment.test.group_object_id
   sku_id          = azuread_group_license_assignment.test.sku_id
-	disabled_plans  = azuread_group_license_assignment.test.disabled_plans
+  disabled_plans  = azuread_group_license_assignment.test.disabled_plans
 }
 `, r.license(data))
 }

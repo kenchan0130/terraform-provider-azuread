@@ -32,7 +32,7 @@ func userFlowAttributeResource() *pluginsdk.Resource {
 		DeleteContext: userFlowAttributeResourceDelete,
 
 		Timeouts: &pluginsdk.ResourceTimeout{
-			Create: pluginsdk.DefaultTimeout(5 * time.Minute),
+			Create: pluginsdk.DefaultTimeout(10 * time.Minute),
 			Read:   pluginsdk.DefaultTimeout(5 * time.Minute),
 			Update: pluginsdk.DefaultTimeout(5 * time.Minute),
 			Delete: pluginsdk.DefaultTimeout(5 * time.Minute),
@@ -44,7 +44,7 @@ func userFlowAttributeResource() *pluginsdk.Resource {
 				for _, err := range errs {
 					out += err.Error()
 				}
-				return fmt.Errorf(out)
+				return errors.New(out)
 			}
 			return nil
 		}),

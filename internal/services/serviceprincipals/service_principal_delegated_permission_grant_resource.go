@@ -6,7 +6,6 @@ package serviceprincipals
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -46,7 +45,7 @@ func servicePrincipalDelegatedPermissionGrantResource() *pluginsdk.Resource {
 				for _, err := range errs {
 					out += err.Error()
 				}
-				return fmt.Errorf(out)
+				return errors.New(out)
 			}
 			return nil
 		}),
@@ -121,7 +120,7 @@ func servicePrincipalDelegatedPermissionGrantResourceCreate(ctx context.Context,
 	}
 
 	properties := stable.OAuth2PermissionGrant{
-		ClientId:   servicePrincipalId.ServicePrincipalId,
+		ClientId:   pointer.To(servicePrincipalId.ServicePrincipalId),
 		ResourceId: pointer.To(resourcePrincipalId.ServicePrincipalId),
 		Scope:      nullable.NoZero(strings.Join(tf.ExpandStringSlice(d.Get("claim_values").(*pluginsdk.Set).List()), " ")),
 	}

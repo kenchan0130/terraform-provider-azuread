@@ -1,3 +1,71 @@
+## 3.4.0 (May 15, 2025)
+
+* dependencies: update `hashicorp/hc-install` to `v0.9.2` ([#1696](https://github.com/hashicorp/terraform-provider-azuread/issues/1696))
+* dependencies: update `hashicorp/terraform-exec` to `v0.23.0` ([#1696](https://github.com/hashicorp/terraform-provider-azuread/issues/1696))
+* dependencies: update `hashicorp/terraform-registry-address` to `v0.2.5` ([#1696](https://github.com/hashicorp/terraform-provider-azuread/issues/1696))
+* dependencies: update `x/crypto` to `v0.38.0` ([#1696](https://github.com/hashicorp/terraform-provider-azuread/issues/1696))
+* dependencies: update `x/net` to  `v0.40.0` ([#1696](https://github.com/hashicorp/terraform-provider-azuread/issues/1696))
+* dependencies: update `x/oauth2` to `v0.30.0` ([#1702](https://github.com/hashicorp/terraform-provider-azuread/issues/1702))
+* dependencies: update `x/sync` to `v0.14.0` ([#1696](https://github.com/hashicorp/terraform-provider-azuread/issues/1696))
+* dependencies: update `x/sys` to `v0.33.0` ([#1696](https://github.com/hashicorp/terraform-provider-azuread/issues/1696))
+* dependencies: update `x/text` to `v0.25.0` ([#1696](https://github.com/hashicorp/terraform-provider-azuread/issues/1696))
+* `azuread_application` - add support for `brk-multihub` scheme for `redirect_uris` ([#1663](https://github.com/hashicorp/terraform-provider-azuread/issues/1663))
+* `azuread_application_redirect_uris` - add support for `brk-multihub` scheme for `redirect_uris` ([#1663](https://github.com/hashicorp/terraform-provider-azuread/issues/1663))
+* `azuread_conditional_access_policy` - populate members only when `membership_kind` is set to `enumerated` ([#1601](https://github.com/hashicorp/terraform-provider-azuread/issues/1601))
+
+
+## 3.3.0 (April 03, 2025)
+
+ENHANCEMENTS:
+
+* dependencies: update `Go` to `1.24.1` ([#1675](https://github.com/hashicorp/terraform-provider-azuread/issues/1675))
+
+BUG FIXES:
+
+* `azuread_application_pre_authorized` - fix unexpected removal of unmanaged pre-authorized apps on delete ([#1659](https://github.com/hashicorp/terraform-provider-azuread/issues/1659))
+* `azuread_directory_role` - fix for changes in Graph API response for ListRolesResponse in create ([#1575](https://github.com/hashicorp/terraform-provider-azuread/issues/1575))
+* `azuread_directory_role_eligibility_schedule_request` - fix `Read` for time based service automatic deletion of request resource ([#1682](https://github.com/hashicorp/terraform-provider-azuread/issues/1682))
+
+## 3.2.0 (March 21, 2025)
+
+FEATURES:
+
+* New Resource: `azuread_group_without_members` ([#1623](https://github.com/hashicorp/terraform-provider-azuread/issues/1623))
+
+ENHANCEMENTS:
+
+* dependencies: update `go-azure-sdk` to `v0.20250131.1134653` ([#1635](https://github.com/hashicorp/terraform-provider-azuread/issues/1635))
+
+BUG FIXES:
+
+* `azuread_access_package_assignment_policy` - fix crash in `Read` ([#1664](https://github.com/hashicorp/terraform-provider-azuread/issues/1664))
+* `azuread_access_package_assignment_policy` - fix use of `alternative_approver` in `approval_settings` ([#1567](https://github.com/hashicorp/terraform-provider-azuread/issues/1567))
+* `azuread_group_role_management_policy` - fix endless drift due to `approval_status computed` ([#1666](https://github.com/hashicorp/terraform-provider-azuread/issues/1666))
+
+## 3.1.0 (January 16, 2025)
+
+ENHANCEMENTS:
+
+* dependencies - update `golang.org/x/crypto` to `0.31.0` ([#1585](https://github.com/hashicorp/terraform-provider-azuread/issues/1585))
+* `data.azuread_named_location` - add support for `country_lookup_method` ([#1589](https://github.com/hashicorp/terraform-provider-azuread/issues/1589))
+* `azuread_conditional_access_policy` - add support for the `insider_risk_levels` property ([#1597](https://github.com/hashicorp/terraform-provider-azuread/issues/1597))
+* `azuread_named_location` - add support for `country_lookup_method` ([#1589](https://github.com/hashicorp/terraform-provider-azuread/issues/1589))
+
+BUG FIXES:
+
+* `azuread_access_package_resource_catalog_association` - allow origin IDs that contain `/` ([#1592](https://github.com/hashicorp/terraform-provider-azuread/issues/1592))
+* `azuread_application` - the `password` block can now correctly be removed ([#1430](https://github.com/hashicorp/terraform-provider-azuread/issues/1430))
+* `azuread_conditional_access_policy` - fix potential panic in expanding `conditions` ([#1619](https://github.com/hashicorp/terraform-provider-azuread/issues/1619))
+* `azuread_group` - prevent creation retry when caller hasn't been specified as an owner ([#1593](https://github.com/hashicorp/terraform-provider-azuread/issues/1593))
+* `azuread_user` - add support for `employee_hire_date` ([#1437](https://github.com/hashicorp/terraform-provider-azuread/issues/1437))
+
+
+## 3.0.2 (October 04, 2024)
+
+BUG FIXES:
+
+* `azuread_group` - Fix crash and memory leak  ([#1518](https://github.com/hashicorp/terraform-provider-azuread/issues/1518))
+
 ## 3.0.1 (September 27, 2024)
 
 BUG FIXES:

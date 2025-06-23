@@ -58,7 +58,7 @@ func groupResource() *pluginsdk.Resource {
 				for _, err := range errs {
 					out += err.Error()
 				}
-				return fmt.Errorf(out)
+				return errors.New(out)
 			}
 			return nil
 		}),
@@ -207,8 +207,8 @@ func groupResource() *pluginsdk.Resource {
 				Type:        pluginsdk.TypeSet,
 				Optional:    true,
 				Computed:    true,
-				MinItems:    1,
 				MaxItems:    100,
+				ConfigMode:  pluginsdk.SchemaConfigModeAttr,
 				Set:         pluginsdk.HashString,
 				Elem: &pluginsdk.Schema{
 					Type:         pluginsdk.TypeString,
@@ -674,14 +674,14 @@ func groupResourceCreate(ctx context.Context, d *pluginsdk.ResourceData, meta in
 			if response.WasBadRequest(resp.HttpResponse) && regexp.MustCompile(groupDuplicateValueError).MatchString(err.Error()) {
 				// Retry the group creation, without the calling principal as owner
 				ownersWithoutCallingPrincipal := make([]string, 0)
-				for _, o := range *properties.Owners_ODataBind {
+				for _, o := range pointer.From(properties.Owners_ODataBind) {
 					if o != callerODataId {
 						ownersWithoutCallingPrincipal = append(ownersWithoutCallingPrincipal, o)
 					}
 				}
 
 				// No point in retrying if the caller wasn't specified as an owner
-				if len(ownersWithoutCallingPrincipal) == len(*properties.Owners) {
+				if len(ownersWithoutCallingPrincipal) == len(pointer.From(properties.Owners_ODataBind)) {
 					log.Printf("[DEBUG] Not retrying group creation for %q as owner was not specified", displayName)
 					return tf.ErrorDiagF(err, "Creating group %q", displayName)
 				}
@@ -809,7 +809,7 @@ func groupResourceCreate(ctx context.Context, d *pluginsdk.ResourceData, meta in
 			if _, err = client.UpdateGroup(ctx, id, beta.Group{
 				AllowExternalSenders: nullable.Value(allowExternalSenders.(bool)),
 			}, groupBeta.DefaultUpdateGroupOperationOptions()); err != nil {
-				return tf.CheckDelegatedAuthDiagF(err, "Failed to set `external_senders_allowed` for %s", id)
+				return tf.CheckDelegatedAuthDiagF(err, "Failed to set `external_senders_allowed` for %s: %+v", id, err)
 			}
 
 			// Wait for AllowExternalSenders to be updated
@@ -1095,7 +1095,7 @@ func groupResourceUpdate(ctx context.Context, d *pluginsdk.ResourceData, meta in
 		}
 
 		existingMembers := make([]string, 0)
-		for resp.Model != nil {
+		if resp.Model != nil {
 			for _, m := range *resp.Model {
 				existingMembers = append(existingMembers, pointer.From(m.DirectoryObject().Id))
 			}
@@ -1137,7 +1137,7 @@ func groupResourceUpdate(ctx context.Context, d *pluginsdk.ResourceData, meta in
 		}
 
 		existingOwners := make([]string, 0)
-		for resp.Model != nil {
+		if resp.Model != nil {
 			for _, o := range *resp.Model {
 				existingOwners = append(existingOwners, pointer.From(o.DirectoryObject().Id))
 			}

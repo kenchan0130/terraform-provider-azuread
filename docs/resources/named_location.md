@@ -57,6 +57,7 @@ The following arguments are supported:
 `country` block supports the following:
 
 * `countries_and_regions` - (Required) List of countries and/or regions in two-letter format specified by ISO 3166-2. 
+* `country_lookup_method` - (Optional) Method of detecting country the user is located in. Possible values are `clientIpAddress` for IP-based location and `authenticatorAppGps` for Authenticator app GPS-based location.  Defaults to `clientIpAddress`.
 * `include_unknown_countries_and_regions` - (Optional) Whether IP addresses that don't map to a country or region should be included in the named location. Defaults to `false`.
 
 ---
@@ -89,5 +90,5 @@ The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/l
 Named Locations can be imported using the `id`, e.g.
 
 ```shell
-terraform import azuread_named_location.my_location 00000000-0000-0000-0000-000000000000
+terraform import azuread_named_location.my_location /identity/conditionalAccess/namedLocations/00000000-0000-0000-0000-000000000000
 ```

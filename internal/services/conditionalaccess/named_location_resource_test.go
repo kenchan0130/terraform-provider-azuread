@@ -138,6 +138,50 @@ func TestAccNamedLocation_updateCountry(t *testing.T) {
 	})
 }
 
+func TestAccNamedLocation_completeCountryByGps(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_named_location", "test")
+	r := NamedLocationResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.completeCountryByGps(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccNamedLocation_updateCountryByGps(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_named_location", "test")
+	r := NamedLocationResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.basicCountry(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+		{
+			Config: r.completeCountryByGps(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+		{
+			Config: r.basicCountry(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
 func (r NamedLocationResource) Exists(ctx context.Context, clients *clients.Client, state *terraform.InstanceState) (*bool, error) {
 	client := clients.ConditionalAccess.NamedLocationClient
 
@@ -207,6 +251,24 @@ func (NamedLocationResource) completeCountry(data acceptance.TestData) string {
 resource "azuread_named_location" "test" {
   display_name = "acctestNLC-%[1]d"
   country {
+    country_lookup_method = "clientIpAddress"
+    countries_and_regions = [
+      "GB",
+      "US",
+      "JP",
+    ]
+    include_unknown_countries_and_regions = true
+  }
+}
+`, data.RandomInteger)
+}
+
+func (NamedLocationResource) completeCountryByGps(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+resource "azuread_named_location" "test" {
+  display_name = "acctestNLC-%[1]d"
+  country {
+    country_lookup_method = "authenticatorAppGps"
     countries_and_regions = [
       "GB",
       "US",
