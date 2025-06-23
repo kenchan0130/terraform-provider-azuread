@@ -509,9 +509,14 @@ func TestAccApplication_featureTagsUpdate(t *testing.T) {
 			Config: r.featureTags(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("feature_tags.#").HasValue("1"),
+				check.That(data.ResourceName).Key("feature_tags.0.custom_single_sign_on").HasValue("true"),
+				check.That(data.ResourceName).Key("feature_tags.0.enterprise").HasValue("true"),
+				check.That(data.ResourceName).Key("feature_tags.0.gallery").HasValue("true"),
+				check.That(data.ResourceName).Key("feature_tags.0.hide").HasValue("true"),
 			),
 		},
-		data.ImportStep(),
+		data.ImportStep("tags"), // tags on this resource are not "standard" azure tags, feature tags are stored in the same place, so an importStep can't reconcile this
 		{
 			Config: r.basic(data),
 			Check: acceptance.ComposeTestCheckFunc(
@@ -523,6 +528,11 @@ func TestAccApplication_featureTagsUpdate(t *testing.T) {
 			Config: r.featureTags(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("feature_tags.#").HasValue("1"),
+				check.That(data.ResourceName).Key("feature_tags.0.custom_single_sign_on").HasValue("true"),
+				check.That(data.ResourceName).Key("feature_tags.0.enterprise").HasValue("true"),
+				check.That(data.ResourceName).Key("feature_tags.0.gallery").HasValue("true"),
+				check.That(data.ResourceName).Key("feature_tags.0.hide").HasValue("true"),
 			),
 		},
 		data.ImportStep(),
@@ -537,23 +547,28 @@ func TestAccApplication_featureTagsUpdate(t *testing.T) {
 			Config: r.featureTags(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("feature_tags.#").HasValue("1"),
+				check.That(data.ResourceName).Key("feature_tags.0.custom_single_sign_on").HasValue("true"),
+				check.That(data.ResourceName).Key("feature_tags.0.enterprise").HasValue("true"),
+				check.That(data.ResourceName).Key("feature_tags.0.gallery").HasValue("true"),
+				check.That(data.ResourceName).Key("feature_tags.0.hide").HasValue("true"),
 			),
 		},
-		data.ImportStep(),
+		data.ImportStep("tags"), // tags on this resource are not "standard" azure tags, feature tags are stored in the same API model location, so an importStep can't reconcile this
 		{
 			Config: r.noFeatureTags(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
 		},
-		data.ImportStep(),
+		data.ImportStep("tags"),
 		{
 			Config: r.featureTags(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
 		},
-		data.ImportStep(),
+		data.ImportStep("tags"),
 	})
 }
 
@@ -648,6 +663,41 @@ func TestAccApplication_passwordNotSet(t *testing.T) {
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
 			Config: ApplicationPasswordResource{}.basic(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		{
+			RefreshState: true,
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("password.#").HasValue("0"),
+			),
+		},
+	})
+}
+
+func TestAccApplication_PasswordSetAndRemove(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
+	startDate := time.Now().AddDate(0, 0, 7).UTC().Format(time.RFC3339)
+	endDate := time.Now().AddDate(0, 5, 27).UTC().Format(time.RFC3339)
+	r := ApplicationResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.passwordComplete(data, startDate, endDate),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("password.#").HasValue("1"),
+				check.That(data.ResourceName).Key("password.0.key_id").Exists(),
+				check.That(data.ResourceName).Key("password.0.value").Exists(),
+				check.That(data.ResourceName).Key("password.0.start_date").Exists(),
+				check.That(data.ResourceName).Key("password.0.end_date").Exists(),
+				check.That(data.ResourceName).Key("password.0.display_name").HasValue(fmt.Sprintf("acctest-appPasswordComplete-%d", data.RandomInteger)),
+			),
+		},
+		{
+			Config: r.passwordRemoved(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -781,10 +831,10 @@ resource "azuread_application" "test" {
   notes                        = "Testing application"
   service_management_reference = "app-for-testing"
 
-  marketing_url         = "https://hashitown-%[1]d.com/"
-  privacy_statement_url = "https://hashitown-%[1]d.com/privacy"
-  support_url           = "https://support.hashitown-%[1]d.com/"
-  terms_of_service_url  = "https://hashitown-%[1]d.com/terms"
+  marketing_url         = "https://hashitown.example.com-%[1]d.com/"
+  privacy_statement_url = "https://hashitown.example.com-%[1]d.com/privacy"
+  support_url           = "https://support.hashitown.example.com-%[1]d.com/"
+  terms_of_service_url  = "https://hashitown.example.com-%[1]d.com/terms"
 
   api {
     mapped_claims_enabled          = true
@@ -896,7 +946,7 @@ resource "azuread_application" "test" {
 
   single_page_application {
     redirect_uris = [
-      "https://beta.hashitown-%[1]d.com/",
+      "https://beta.hashitown.example.com-%[1]d.com/",
     ]
   }
 
@@ -908,12 +958,12 @@ resource "azuread_application" "test" {
   ]
 
   web {
-    homepage_url = "https://app.hashitown-%[1]d.com/"
-    logout_url   = "https://app.hashitown-%[1]d.com/logout"
+    homepage_url = "https://app.hashitown.example.com-%[1]d.com/"
+    logout_url   = "https://app.hashitown.example.com-%[1]d.com/logout"
 
     redirect_uris = [
-      "https://app.hashitown-%[1]d.com/",
-      "https://classic.hashitown-%[1]d.com/",
+      "https://app.hashitown.example.com-%[1]d.com/",
+      "https://classic.hashitown.example.com-%[1]d.com/",
       "urn:ietf:wg:oauth:2.0:oob",
     ]
 
@@ -1580,8 +1630,8 @@ resource "azuread_application" "owner" {
 }
 
 resource "azuread_service_principal" "owner" {
-  count          = 27
-  application_id = azuread_application.owner[count.index].application_id
+  count     = 27
+  client_id = azuread_application.owner[count.index].client_id
 }
 
 resource "azuread_user" "owner" {
@@ -1698,4 +1748,17 @@ resource "azuread_application" "test" {
   }
 }
 `, data.RandomInteger, startDate, endDate)
+}
+
+func (r ApplicationResource) passwordRemoved(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azuread" {}
+
+data "azuread_client_config" "current" {}
+
+resource "azuread_application" "test" {
+  display_name = "acctest-APP-%[1]d"
+  owners       = [data.azuread_client_config.current.object_id]
+}
+`, data.RandomInteger)
 }

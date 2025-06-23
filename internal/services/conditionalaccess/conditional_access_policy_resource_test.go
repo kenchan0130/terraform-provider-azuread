@@ -6,6 +6,7 @@ package conditionalaccess_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/go-azure-helpers/lang/pointer"
@@ -32,6 +33,56 @@ func TestAccConditionalAccessPolicy_basic(t *testing.T) {
 				check.That(data.ResourceName).Key("id").Exists(),
 				check.That(data.ResourceName).Key("display_name").HasValue(fmt.Sprintf("acctest-CONPOLICY-%d", data.RandomInteger)),
 				check.That(data.ResourceName).Key("state").HasValue("disabled"),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccConditionalAccessPolicy_signInFrequencyEveryTime(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_conditional_access_policy", "test")
+	r := ConditionalAccessPolicyResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.signinfrequencyintervalEverytime(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccConditionalAccessPolicy_signInFrequencyEveryTimeShouldFail(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_conditional_access_policy", "test")
+	r := ConditionalAccessPolicyResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config:      r.signinfrequencyintervalEverytimeShouldFail(data),
+			PlanOnly:    true,
+			ExpectError: regexp.MustCompile("when `session_controls.sign_in_frequency_interval` is set to"),
+		},
+	})
+}
+
+func TestAccConditionalAccessPolicy_signInFrequencyEveryTimeUpdate(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_conditional_access_policy", "test")
+	r := ConditionalAccessPolicyResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.basic(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+		{
+			Config: r.signinfrequencyintervalEverytime(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
 			),
 		},
 		data.ImportStep(),
@@ -297,6 +348,24 @@ func TestAccConditionalAccessPolicy_authenticationStrength(t *testing.T) {
 	})
 }
 
+func TestAccConditionalAccessPolicy_authenticationStrengthHardcoded(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_conditional_access_policy", "test")
+	r := ConditionalAccessPolicyResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.authenticationStrengthPolicyHardcoded(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("id").Exists(),
+				check.That(data.ResourceName).Key("display_name").HasValue(fmt.Sprintf("acctest-CONPOLICY-%d", data.RandomInteger)),
+				check.That(data.ResourceName).Key("grant_controls.0.authentication_strength_policy_id").HasValue("/policies/authenticationStrengthPolicies/00000000-0000-0000-0000-000000000004"),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
 func TestAccConditionalAccessPolicy_guestsOrExternalUsers(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azuread_conditional_access_policy", "test")
 	r := ConditionalAccessPolicyResource{}
@@ -326,6 +395,44 @@ func TestAccConditionalAccessPolicy_guestsOrExternalUsers(t *testing.T) {
 				check.That(data.ResourceName).Key("id").Exists(),
 				check.That(data.ResourceName).Key("display_name").HasValue(fmt.Sprintf("acctest-CONPOLICY-%d", data.RandomInteger)),
 				check.That(data.ResourceName).Key("conditions.0.users.0.excluded_guests_or_external_users.0.external_tenants.0.membership_kind").HasValue("all"),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccConditionalAccessPolicy_insiderRisk(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_conditional_access_policy", "test")
+	r := ConditionalAccessPolicyResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.insiderRisk(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("id").Exists(),
+				check.That(data.ResourceName).Key("display_name").HasValue(fmt.Sprintf("acctest-CONPOLICY-%d", data.RandomInteger)),
+				check.That(data.ResourceName).Key("state").HasValue("disabled"),
+				check.That(data.ResourceName).Key("conditions.0.insider_risk_levels").HasValue("moderate"),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccConditionalAccessPolicy_guestsOrExternalUsersServiceProviderExternalTenantExcluded(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_conditional_access_policy", "test")
+	r := ConditionalAccessPolicyResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.guestsOrExternalUsersServiceProviderExternalTenantExcluded(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("id").Exists(),
+				check.That(data.ResourceName).Key("display_name").HasValue(fmt.Sprintf("acctest-CONPOLICY-%d", data.RandomInteger)),
+				check.That(data.ResourceName).Key("conditions.0.users.0.excluded_guests_or_external_users.0.external_tenants.0.membership_kind").HasValue("enumerated"),
+				check.That(data.ResourceName).Key("conditions.0.users.0.excluded_guests_or_external_users.0.external_tenants.0.members.#").HasValue("1"),
 			),
 		},
 		data.ImportStep(),
@@ -390,6 +497,7 @@ resource "azuread_conditional_access_policy" "test" {
     client_app_types    = ["all"]
     sign_in_risk_levels = ["medium"]
     user_risk_levels    = ["medium"]
+    insider_risk_levels = "elevated"
 
     applications {
       included_applications = ["All"]
@@ -789,6 +897,36 @@ resource "azuread_conditional_access_policy" "test" {
 `, data.RandomInteger)
 }
 
+func (ConditionalAccessPolicyResource) authenticationStrengthPolicyHardcoded(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azuread" {}
+
+resource "azuread_conditional_access_policy" "test" {
+  display_name = "acctest-CONPOLICY-%[1]d"
+  state        = "disabled"
+
+  conditions {
+    client_app_types = ["browser"]
+
+    applications {
+      included_applications = ["None"]
+    }
+
+    users {
+      included_users = ["All"]
+      excluded_users = ["GuestsOrExternalUsers"]
+    }
+  }
+
+  # Hard-code the Phishing resistant MFA policy
+  grant_controls {
+    operator                          = "OR"
+    authentication_strength_policy_id = "/policies/authenticationStrengthPolicies/00000000-0000-0000-0000-000000000004"
+  }
+}
+`, data.RandomInteger)
+}
+
 func (ConditionalAccessPolicyResource) guestsOrExternalUsersAllServiceProvidersIncluded(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 resource "azuread_conditional_access_policy" "test" {
@@ -847,6 +985,189 @@ resource "azuread_conditional_access_policy" "test" {
   grant_controls {
     operator          = "OR"
     built_in_controls = ["block"]
+  }
+}
+`, data.RandomInteger)
+}
+
+func (ConditionalAccessPolicyResource) insiderRisk(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azuread" {}
+
+resource "azuread_conditional_access_policy" "test" {
+  display_name = "acctest-CONPOLICY-%[1]d"
+  state        = "disabled"
+
+  conditions {
+    client_app_types    = ["browser"]
+    insider_risk_levels = "moderate"
+
+    applications {
+      included_applications = ["None"]
+    }
+
+    users {
+      included_users = ["All"]
+      excluded_users = ["GuestsOrExternalUsers"]
+    }
+  }
+
+  grant_controls {
+    operator          = "OR"
+    built_in_controls = ["block"]
+  }
+}
+`, data.RandomInteger)
+}
+
+func (ConditionalAccessPolicyResource) guestsOrExternalUsersServiceProviderExternalTenantExcluded(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+resource "azuread_conditional_access_policy" "test" {
+  display_name = "acctest-CONPOLICY-%[1]d"
+  state        = "disabled"
+
+  conditions {
+    client_app_types = ["browser"]
+
+    applications {
+      included_applications = ["None"]
+    }
+
+    users {
+      included_users = ["None"]
+      excluded_guests_or_external_users {
+        guest_or_external_user_types = ["serviceProvider"]
+        external_tenants {
+          membership_kind = "enumerated"
+          members = [
+            "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+          ]
+        }
+      }
+    }
+  }
+
+  grant_controls {
+    operator          = "OR"
+    built_in_controls = ["block"]
+  }
+}
+`, data.RandomInteger)
+}
+
+func (ConditionalAccessPolicyResource) signinfrequencyintervalEverytime(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azuread" {}
+
+resource "azuread_conditional_access_policy" "test" {
+  display_name = "acctest-CONPOLICY-%[1]d"
+  state        = "enabledForReportingButNotEnforced"
+
+  conditions {
+    client_app_types = [
+      "all",
+    ]
+    sign_in_risk_levels = []
+    user_risk_levels = [
+      "high",
+    ]
+    service_principal_risk_levels = []
+
+    applications {
+      excluded_applications = []
+      included_applications = [
+        "All",
+      ]
+    }
+
+    users {
+      excluded_groups = []
+      excluded_roles  = []
+      excluded_users  = []
+      included_groups = []
+      included_roles  = []
+      included_users = [
+        "None"
+      ]
+    }
+  }
+
+  grant_controls {
+    built_in_controls = [
+      "mfa",
+      "passwordChange"
+    ]
+    custom_authentication_factors = []
+    operator                      = "AND"
+    terms_of_use                  = []
+  }
+
+  session_controls {
+    cloud_app_security_policy             = null
+    disable_resilience_defaults           = null
+    persistent_browser_mode               = null
+    sign_in_frequency_authentication_type = "primaryAndSecondaryAuthentication"
+    sign_in_frequency_interval            = "everyTime" // NOTE: this precludes the use of sign_in_frequency_period etc
+  }
+}
+`, data.RandomInteger)
+}
+
+func (ConditionalAccessPolicyResource) signinfrequencyintervalEverytimeShouldFail(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azuread" {}
+
+resource "azuread_conditional_access_policy" "test" {
+  display_name = "acctest-CONPOLICY-%[1]d"
+  state        = "enabledForReportingButNotEnforced"
+
+  conditions {
+    client_app_types = [
+      "all",
+    ]
+    sign_in_risk_levels = []
+    user_risk_levels = [
+      "high",
+    ]
+    service_principal_risk_levels = []
+
+    applications {
+      excluded_applications = []
+      included_applications = [
+        "All",
+      ]
+    }
+
+    users {
+      excluded_groups = []
+      excluded_roles  = []
+      excluded_users  = []
+      included_groups = []
+      included_roles  = []
+      included_users = [
+        "None"
+      ]
+    }
+  }
+
+  grant_controls {
+    built_in_controls = [
+      "mfa",
+      "passwordChange"
+    ]
+    custom_authentication_factors = []
+    operator                      = "AND"
+    terms_of_use                  = []
+  }
+
+  session_controls {
+    cloud_app_security_policy             = null
+    disable_resilience_defaults           = null
+    persistent_browser_mode               = null
+    sign_in_frequency_authentication_type = "primaryAndSecondaryAuthentication"
+    sign_in_frequency_interval            = "everyTime" // NOTE: this precludes the use of sign_in_frequency_period etc
+    sign_in_frequency_period              = "hours"     // This should fail because sign_in_frequency_interval is set to "everyTime"
+    sign_in_frequency                     = 1           // This should fail because sign_in_frequency_interval is set to "everyTime"
   }
 }
 `, data.RandomInteger)

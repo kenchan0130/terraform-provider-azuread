@@ -59,7 +59,7 @@ func applicationResource() *pluginsdk.Resource {
 				for _, err := range errs {
 					out += err.Error()
 				}
-				return fmt.Errorf(out)
+				return errors.New(out)
 			}
 			return nil
 		}),
@@ -405,12 +405,11 @@ func applicationResource() *pluginsdk.Resource {
 				},
 			},
 
-			//lintignore:S018 // We are intentionally using TypeSet here to effect a replace-style representation in the diff for this block
+			// lintignore:S018 // We are intentionally using TypeSet here to effect a replace-style representation in the diff for this block
 			"password": {
 				Description: "App password definition",
 				Type:        pluginsdk.TypeSet,
 				Optional:    true,
-				Computed:    true,
 				MaxItems:    1,
 				Elem: &pluginsdk.Resource{
 					Schema: map[string]*pluginsdk.Schema{

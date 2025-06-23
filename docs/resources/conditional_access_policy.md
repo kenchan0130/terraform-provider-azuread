@@ -163,6 +163,7 @@ The following arguments are supported:
 * `client_app_types` - (Required) A list of client application types included in the policy. Possible values are: `all`, `browser`, `mobileAppsAndDesktopClients`, `exchangeActiveSync`, `easSupported` and `other`.
 * `client_applications` - (Optional) An `client_applications` block as documented below, which specifies service principals included in and excluded from the policy.
 * `devices` - (Optional) A `devices` block as documented below, which describes devices to be included in and excluded from the policy. A `devices` block can be added to an existing policy, but removing the `devices` block forces a new resource to be created.
+* `insider_risk_levels` - (Optional) The insider risk level in the policy. Possible values are: `minor`, `moderate`, `elevated`, `unknownFutureValue`.
 * `locations` - (Optional) A `locations` block as documented below, which specifies locations included in and excluded from the policy.
 * `platforms` - (Optional) A `platforms` block as documented below, which specifies platforms included in and excluded from the policy.
 * `service_principal_risk_levels` - (Optional) A list of service principal sign-in risk levels included in the policy. Possible values are: `low`, `medium`, `high`, `none`, `unknownFutureValue`.
@@ -245,7 +246,7 @@ The following arguments are supported:
 
 `grant_controls` block supports the following:
 
-* `authentication_strength_policy_id` - (Optional) ID of an Authentication Strength Policy to use in this policy.
+* `authentication_strength_policy_id` - (Optional) ID of an Authentication Strength Policy to use in this policy. When using a hard-coded ID, the UUID value should be prefixed with: `/policies/authenticationStrengthPolicies/`.
 * `built_in_controls` - (Optional) List of built-in controls required by the policy. Possible values are: `block`, `mfa`, `approvedApplication`, `compliantApplication`, `compliantDevice`, `domainJoinedDevice`, `passwordChange` or `unknownFutureValue`.
 * `custom_authentication_factors` - (Optional) List of custom controls IDs required by the policy.
 * `operator` - (Required) Defines the relationship of the grant controls. Possible values are: `AND`, `OR`.
@@ -291,5 +292,5 @@ The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/l
 Conditional Access Policies can be imported using the `id`, e.g.
 
 ```shell
-terraform import azuread_conditional_access_policy.my_location 00000000-0000-0000-0000-000000000000
+terraform import azuread_conditional_access_policy.my_location /identity/conditionalAccess/policies/00000000-0000-0000-0000-000000000000
 ```

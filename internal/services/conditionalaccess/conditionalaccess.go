@@ -37,6 +37,11 @@ func flattenConditionalAccessConditionSet(in *stable.ConditionalAccessConditionS
 		userRiskLevels = append(userRiskLevels, string(v))
 	}
 
+	insiderRiskLevels := ""
+	if in.InsiderRiskLevels != nil {
+		insiderRiskLevels = string(pointer.From(in.InsiderRiskLevels))
+	}
+
 	return []interface{}{
 		map[string]interface{}{
 			"applications":                  flattenConditionalAccessApplications(in.Applications),
@@ -49,6 +54,7 @@ func flattenConditionalAccessConditionSet(in *stable.ConditionalAccessConditionS
 			"service_principal_risk_levels": servicePrincipalRiskLevels,
 			"sign_in_risk_levels":           signInRiskLevels,
 			"user_risk_levels":              userRiskLevels,
+			"insider_risk_levels":           insiderRiskLevels,
 		},
 	}
 }
@@ -278,10 +284,16 @@ func flattenCountryNamedLocation(in *stable.CountryNamedLocation) []interface{} 
 		includeUnknown = *in.IncludeUnknownCountriesAndRegions
 	}
 
+	countryLookupMethod := stable.CountryLookupMethodType_ClientIPAddress
+	if in.CountryLookupMethod != nil {
+		countryLookupMethod = *in.CountryLookupMethod
+	}
+
 	return []interface{}{
 		map[string]interface{}{
 			"countries_and_regions":                 tf.FlattenStringSlice(in.CountriesAndRegions),
 			"include_unknown_countries_and_regions": includeUnknown,
+			"country_lookup_method":                 countryLookupMethod,
 		},
 	}
 }
@@ -361,6 +373,10 @@ func expandConditionalAccessConditionSet(in []interface{}) *stable.ConditionalAc
 		userRiskLevels = append(userRiskLevels, stable.RiskLevel(elem.(string)))
 	}
 
+	if insiderRiskLevel, ok := config["insider_risk_levels"]; ok && insiderRiskLevel.(string) != "" {
+		result.InsiderRiskLevels = pointer.To(stable.ConditionalAccessInsiderRiskLevels(insiderRiskLevel.(string)))
+	}
+
 	result.Applications = expandConditionalAccessApplications(applications)
 	result.ClientAppTypes = clientAppTypes
 	result.ClientApplications = expandConditionalAccessClientApplications(clientApplications)
@@ -394,6 +410,10 @@ func expandConditionalAccessClientApplications(in []interface{}) *stable.Conditi
 
 func expandConditionalAccessApplications(in []interface{}) stable.ConditionalAccessApplications {
 	result := stable.ConditionalAccessApplications{}
+	if len(in) == 0 || in[0] == nil {
+		return result
+	}
+
 	config := in[0].(map[string]interface{})
 
 	includeApplications := config["included_applications"].([]interface{})
@@ -532,19 +552,12 @@ func expandConditionalAccessSessionControls(in []interface{}) *stable.Conditiona
 
 	config := in[0].(map[string]interface{})
 
-	result.ApplicationEnforcedRestrictions = &stable.ApplicationEnforcedRestrictionsSessionControl{
-		IsEnabled: nullable.Value(config["application_enforced_restrictions_enabled"].(bool)),
-	}
-
 	if cloudAppSecurity := config["cloud_app_security_policy"]; cloudAppSecurity.(string) != "" {
 		result.CloudAppSecurity = &stable.CloudAppSecuritySessionControl{
 			IsEnabled:            nullable.Value(true),
 			CloudAppSecurityType: pointer.To(stable.CloudAppSecuritySessionControlType(cloudAppSecurity.(string))),
 		}
 	}
-
-	DisableResilienceDefaults := config["disable_resilience_defaults"]
-	result.DisableResilienceDefaults = nullable.Value(DisableResilienceDefaults.(bool))
 
 	if persistentBrowserMode := config["persistent_browser_mode"]; persistentBrowserMode.(string) != "" {
 		result.PersistentBrowser = &stable.PersistentBrowserSessionControl{
@@ -559,7 +572,6 @@ func expandConditionalAccessSessionControls(in []interface{}) *stable.Conditiona
 		signInFrequency.Type = pointer.To(stable.SigninFrequencyType(config["sign_in_frequency_period"].(string)))
 		signInFrequency.Value = nullable.Value(int64(frequencyValue))
 
-		// AuthenticationType and FrequencyInterval must be set to default values here
 		signInFrequency.AuthenticationType = pointer.To(stable.SignInFrequencyAuthenticationType_PrimaryAndSecondaryAuthentication)
 		signInFrequency.FrequencyInterval = pointer.To(stable.SignInFrequencyInterval_TimeBased)
 	}
@@ -569,7 +581,24 @@ func expandConditionalAccessSessionControls(in []interface{}) *stable.Conditiona
 	}
 
 	if interval, ok := config["sign_in_frequency_interval"]; ok && interval.(string) != "" {
+		signInFrequency.IsEnabled = nullable.Value(true)
+		signInFrequency.AuthenticationType = pointer.To(stable.SignInFrequencyAuthenticationType_PrimaryAndSecondaryAuthentication)
+		if authType := config["sign_in_frequency_authentication_type"].(string); authType != "" {
+			signInFrequency.AuthenticationType = pointer.ToEnum[stable.SignInFrequencyAuthenticationType](authType)
+		}
 		signInFrequency.FrequencyInterval = pointer.To(stable.SignInFrequencyInterval(interval.(string)))
+	}
+
+	applicationEnforcedRestrictions := config["application_enforced_restrictions_enabled"].(bool)
+	if pointer.From(signInFrequency.FrequencyInterval) != stable.SignInFrequencyInterval_EveryTime { // application enforced restrictions are not allowed for everyTime sign-in frequency see https://github.com/hashicorp/terraform-provider-azuread/issues/1225
+		result.ApplicationEnforcedRestrictions = &stable.ApplicationEnforcedRestrictionsSessionControl{
+			IsEnabled: nullable.Value(applicationEnforcedRestrictions),
+		}
+	}
+
+	DisableResilienceDefaults := config["disable_resilience_defaults"].(bool)
+	if pointer.From(signInFrequency.FrequencyInterval) != stable.SignInFrequencyInterval_EveryTime { // disable resilience defaults are not allowed for everyTime sign-in frequency see https://github.com/hashicorp/terraform-provider-azuread/issues/1225
+		result.DisableResilienceDefaults = nullable.Value(DisableResilienceDefaults)
 	}
 
 	// API returns 400 error if signInFrequency is set with all default/zero values
@@ -629,18 +658,23 @@ func expandExternalTenants(in []interface{}) stable.ConditionalAccessExternalTen
 		return nil
 	}
 
-	result := stable.BaseConditionalAccessExternalTenantsImpl{}
-
 	config := in[0].(map[string]interface{})
 
 	members := config["members"].([]interface{})
+	membershipKind := stable.ConditionalAccessExternalTenantsMembershipKind(config["membership_kind"].(string))
 
-	result.MembershipKind = pointer.To(stable.ConditionalAccessExternalTenantsMembershipKind(config["membership_kind"].(string)))
+	// only membership_kind enumerated is allowed to have members field set
+	if membershipKind == stable.ConditionalAccessExternalTenantsMembershipKind_Enumerated {
+		result := stable.ConditionalAccessEnumeratedExternalTenants{}
 
-	// only membership_kind enumerated is allowed to have members field set, so we omit setting an empty array when no members configured
-	if len(members) > 0 {
+		result.MembershipKind = pointer.To(membershipKind)
 		result.Members = tf.ExpandStringSlicePtr(members)
+
+		return &result
 	}
+
+	result := stable.BaseConditionalAccessExternalTenantsImpl{}
+	result.MembershipKind = pointer.To(membershipKind)
 
 	return &result
 }
@@ -658,6 +692,10 @@ func expandCountryNamedLocation(in []interface{}) *stable.CountryNamedLocation {
 
 	result.CountriesAndRegions = tf.ExpandStringSlice(countriesAndRegions)
 	result.IncludeUnknownCountriesAndRegions = pointer.To(includeUnknown.(bool))
+
+	if countryLookupMethodType, ok := config["country_lookup_method"]; ok && countryLookupMethodType.(string) != "" {
+		result.CountryLookupMethod = pointer.To(stable.CountryLookupMethodType(countryLookupMethodType.(string)))
+	}
 
 	return &result
 }
